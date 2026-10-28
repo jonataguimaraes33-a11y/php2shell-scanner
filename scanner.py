@@ -54,6 +54,7 @@ WRITE_BUFFER_HIGH_WATER = 256 << 10
 WRITE_BUFFER_LOW_WATER = 64 << 10
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+ 
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 "
     "Safari/537.36 PHP2Shell/1.0.0"
 )
@@ -160,10 +161,10 @@ def normalize_url(raw_url: str) -> str:
             "credentials in URLs are not supported; use an Authorization header"
         )
 
-    path = parsed.path
-    if not path or path == "/":
+    path = parsed.path or DEFAULT_PATH
+    if path == "/":
         path = DEFAULT_PATH
-    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
 
 
 def safe_url_label(raw_url: str) -> str:
@@ -178,14 +179,15 @@ def safe_url_label(raw_url: str) -> str:
     if not parsed.netloc:
         return "<invalid URL>"
     netloc = parsed.netloc.rsplit("@", 1)[-1]
-    return urlunsplit((parsed.scheme, netloc, parsed.path, "", ""))
+    return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, ""))
 
 
 def replace_path(target_url: str, path_value: str) -> str:
     parsed = urlsplit(target_url)
     custom = urlsplit(path_value if path_value.startswith("/") else "/" + path_value)
     path = custom.path or DEFAULT_PATH
-    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+    query = custom.query or parsed.query
+    return urlunsplit((parsed.scheme, parsed.netloc, path, query, ""))
 
 
 def phpmyadmin_target(target_url: str) -> str:
@@ -1034,6 +1036,7 @@ def deduplicate_hosts(hosts: List[str]) -> List[str]:
                 parsed.scheme.lower(),
                 parsed.netloc.lower(),
                 parsed.path,
+                parsed.query,
             )
         except ValueError:
             key = (safe_url_label(host),)
